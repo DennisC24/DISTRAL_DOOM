@@ -1,5 +1,10 @@
 # DISTRAL_DOOM
 
+<p align="center">
+  <img src="DISTRAL.png" width="400" />
+  <img src="doom.gif" width="400" />
+</p>
+
 ## Project Description
 This project implements the DISTRAL (Distill & Transfer Learning) algorithm in VizDoom environments. DISTRAL is a multi-task reinforcement learning algorithm that learns a shared policy across multiple tasks while allowing task-specific policies to adapt to their individual environments.
 
