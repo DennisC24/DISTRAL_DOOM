@@ -1,0 +1,9 @@
+torch
+stable-baselines3
+gymnasium
+vizdoom
+numpy
+opencv-python
+pandas
+shimmy
+optuna
