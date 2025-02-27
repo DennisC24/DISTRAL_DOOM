@@ -1,8 +1,8 @@
 # DISTRAL_DOOM
 
 <p align="center">
-  <img src="DISTRAL.png" width="400" />
-  <img src="doom.gif" width="400" />
+  <img src="1*6ButB0aNnpx0OHBS9dDt7w.gif" width="400" />
+  <img src="llustration-of-the-Distral-framework.png" width="400" />
 </p>
 
 ## Project Description
