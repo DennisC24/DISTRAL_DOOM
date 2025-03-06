@@ -72,13 +72,14 @@ def train(config_paths, mapping, env_moves, kl_weight):
             env_number=i
         )
         task_policy.q_net = task_policy.q_net.to("cuda")
+        task_policy.q_net_target = task_policy.q_net_target.to("cuda")
         task_policies.append(task_policy)
         reward_callbacks.append(RewardTrackingCallback())
 
     # Main Training Loop
     batch_size = 100
     num_updates = 1000
-    num_play = 1000
+    num_play = 1
     
     for step in range(num_updates):
         torch.cuda.empty_cache()
@@ -87,7 +88,7 @@ def train(config_paths, mapping, env_moves, kl_weight):
         for i, (task_policy, reward_callback) in enumerate(zip(task_policies, reward_callbacks)):
             task_policy.learn(total_timesteps=num_play, reset_num_timesteps=False, callback=reward_callback)
             all_episode_rewards[i] = reward_callback.episode_rewards
-
+            print("Env completed")
         replay_data = [policy.replay_buffer.sample(batch_size, env=policy._vec_normalize_env) for policy in task_policies]
         batch_obs = [torch.tensor(data.observations, dtype=torch.float32).to("cuda") for data in replay_data]
         task_policy_q = []

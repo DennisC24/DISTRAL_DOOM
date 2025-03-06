@@ -4,6 +4,8 @@ import pandas as pd
 from NETWORKS import CustomDQN, SharedPolicy
 from ENVIRONMENTS import create_vizdoom_envs
 from UTILS import RewardTrackingCallback, compute_kl_divergence
+from gymnasium import spaces
+
 def set_seeds(seed=42):
     """Set seeds for reproducibility"""
     import numpy as np
@@ -86,10 +88,15 @@ if __name__ == "__main__":
     
     task_policies = []
     for i, env in enumerate(envs):
+        # Create action space based on number of actions for this environment
         action_dim = len(ENV_MOVES[i])
+        env.action_dim = action_dim
+        # Modify environment's action space to match our desired size
+        env.action_space = spaces.Discrete(action_dim)
+        
         task_policy = CustomDQN(
             "CnnPolicy",
-            env,
+            env,  # Now env has the correct action space
             verbose=0,
             learning_rate=args.learning_rate,
             shared_policy=shared_policy,
@@ -97,10 +104,9 @@ if __name__ == "__main__":
             env_moves=ENV_MOVES[i],
             mapping=Mapping,
             max_actions=action_dim,
-            env_number=i
+            env_number= i 
         )
         task_policies.append(task_policy)
-        print(f"Task policy: QNetwork = {task_policy.q_net}")
 
     
     
@@ -112,7 +118,7 @@ if __name__ == "__main__":
     batch_size = 100
     run_name = args.run_name
     num_play = args.num_timesteps
-    num_updates = 1000000
+    num_updates = 100
     all_episode_rewards = [[] for _ in envs]
     initial_memory = torch.cuda.memory_allocated()
     for step in range(num_updates):

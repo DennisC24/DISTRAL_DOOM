@@ -4,6 +4,8 @@ from gymnasium.spaces import Box, Discrete
 import collections
 import numpy as np
 import cv2
+
+
 class VizDoomGym(gym.Env): 
     def __init__(self, render=False, config='./VIZDOOM/scenarios/defend_the_line.cfg', max_frames=1000): 
         super(VizDoomGym, self).__init__()
@@ -16,13 +18,6 @@ class VizDoomGym(gym.Env):
         
         # Define observation and action spaces
         self.observation_space = Box(low=0, high=255, shape=(100, 160, 1), dtype=np.uint8)
-        
-        # Determine action space based on config file
-        if "deadly_corridor" in config:
-            self.action_dim = 7  # Full action set
-        else:
-            self.action_dim = 3  # Limited action set
-        self.action_space = Discrete(self.action_dim)
         
         # Store frames for video recording
         self.frames = collections.deque(maxlen=max_frames)

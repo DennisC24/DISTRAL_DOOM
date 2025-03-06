@@ -5,50 +5,75 @@ from stable_baselines3 import DQN
 from UTILS import compute_kl_divergence
 from stable_baselines3.dqn.policies import CnnPolicy, DQNPolicy, MlpPolicy, MultiInputPolicy, QNetwork
 import torch.nn as nn
+import torch
+import gym
+from typing import Union, Optional, Dict, Tuple
 
 class NatureCNN(nn.Module):
-    def __init__(self, input_channels: int):
-        super(NatureCNN, self).__init__()
+    def __init__(self, input_channels, features_dim=512):
+        super().__init__()
         # Define the convolutional layers
         self.cnn = nn.Sequential(
-            nn.Conv2d(input_channels, 32, kernel_size=8, stride=4),  # First conv layer
+            nn.Conv2d(input_channels, 32, kernel_size=8, stride=4),  # Use input_channels directly
             nn.ReLU(),  # Activation function
             nn.Conv2d(32, 64, kernel_size=4, stride=2),  # Second conv layer
             nn.ReLU(),
             nn.Conv2d(64, 64, kernel_size=3, stride=1),  # Third conv layer
             nn.ReLU(),
-            nn.Flatten()  # Flatten the output for the linear layer
+            nn.Flatten(start_dim=1, end_dim=-1)  # Flatten the output for the linear layer
         )
         # Define the linear layer
         self.linear = nn.Sequential(
-            nn.Linear(9216, 512),  # Fully connected layer
+            nn.Linear(9216, features_dim),  # 3136 is from CNN output
             nn.ReLU()
         )
 
+        # Ensure model is on CUDA if available
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.to(self.device)
+
     def forward(self, x):
-        # Pass input through CNN layers
+        # Ensure input is float and on correct device
+        if x.dtype != torch.float32:
+            x = x.to(dtype=torch.float32)
+        x = x.to(self.device)
+        
+        # Debug print
+        
         x = self.cnn(x)
-        # Pass through linear layer
-        return self.linear(x)
+        x = self.linear(x)
+        return x
 
 class SharedPolicy(nn.Module):
-    def __init__(self, input_channels: int, max_actions: int):
-        super(SharedPolicy, self).__init__()
+    def __init__(self, input_channels, action_space):
+        super().__init__()
         # Use NatureCNN as the feature extractor
         self.features_extractor = NatureCNN(input_channels)
-        # Define the Q-network with output size max_actions
+        # Define the Q-network with output size action_space
         self.q_net = nn.Sequential(
-            nn.Linear(512, max_actions)  # Output layer for action values
+            nn.Linear(512, action_space)  # 512 is features_dim from NatureCNN
         )
 
-    def forward(self, x):
-        # Extract features
-        x = self.features_extractor(x)
-        # Get Q-values for each action
-        return self.q_net(x)
+        # Ensure model is on CUDA if available
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.to(self.device)
 
+    def forward(self, x):
+        # Ensure input is on correct device
+        x = x.to(self.device)
+        x = self.features_extractor(x)
+        x = self.q_net(x)
+        return x
+
+    def set_training_mode(self, mode: bool) -> None:
+        """
+        Put the policy in either training or evaluation mode.
+        
+        :param mode: if true, set to training mode
+        """
+        self.train(mode)
 class CustomDQN(DQN):
-    def __init__(self, *args, shared_policy, kl_weight=0.125, env_moves, mapping, max_actions, env_number, **kwargs):
+    def __init__(self, *args, shared_policy=None, kl_weight=0.1, env_moves=None, mapping=None, max_actions=None, env_number=None, **kwargs):
         """
         Initialize CustomDQN with an additional KL divergence weight term.
 
@@ -67,10 +92,12 @@ class CustomDQN(DQN):
         self.mapping = mapping
         self.max_actions = max_actions
         self.env_number = env_number
-        self.q_net = SharedPolicy(input_channels=1, max_actions=max_actions).to(self.device)
-        self.q_net_target = SharedPolicy(input_channels=1, max_actions=max_actions).to(self.device)
-        print(self.q_net)
-        print(self.q_net_target)
+        
+        # Set action space to match environment moves
+        print(f"CustomDQN initialized for env {env_number} with {len(env_moves)} actions: {env_moves}")
+        print(f"Q-net: {self.q_net}\n")
+        print(f"Q-net target: {self.q_net_target}\n")
+
     def train(self, gradient_steps: int, batch_size: int = 100) -> None:
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)

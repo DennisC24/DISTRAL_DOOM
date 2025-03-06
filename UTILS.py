@@ -46,47 +46,32 @@ class RewardTrackingCallback(BaseCallback):
         # If the episode is done, print and log it
         if done:
             self.episode_rewards.append(self.current_episode_reward)
-            print(f"Episode Number {len(self.episode_rewards)} done! Reward: {self.current_episode_reward} | Length: {self.current_episode_length}")
             self.current_episode_reward = 0  # Reset for the next episode
             self.current_episode_length = 0  # Reset for the next episode
             
         return True
     
-def compute_kl_divergence(task_policy_q, shared_policy_q, env_moves, mapping, env_number, temperature=1.0, epsilon=1e-10):
-    """
-    Computes the KL divergence between task-specific and shared policy logits for common actions.
-
-    Args:
-        task_policy_q (torch.Tensor): Logits from the task-specific policy (batch_size, num_common_actions).
-        shared_policy_q (torch.Tensor): Logits from the shared policy (batch_size, num_total_actions).
-        env_moves (list): List of moves for the specific environment.
-        mapping (dict): Mapping of moves to indices.
-        env_number (int): The index or number of the environment.
-        temperature (float): Temperature for scaling logits.
-        epsilon (float): Small value to avoid log(0).
-
-    Returns:
-        torch.Tensor: The mean KL divergence over the batch for common actions.
-    """
-    # Identify common action indices in the shared policy
-    common_indices = [mapping[move] for move in env_moves if move in mapping]
-
-
-    # Filter logits for common actions
-    task_policy_q_common = task_policy_q[:, :len(common_indices)]
-    shared_policy_q_common = shared_policy_q[:, common_indices]
-
-    # Apply temperature scaling and convert logits to probabilities
-    task_probs = F.softmax(task_policy_q_common / temperature, dim=-1)
-    shared_probs = F.softmax(shared_policy_q_common / temperature, dim=-1)
-
+def compute_kl_divergence(task_policy_q, shared_policy_q, env_moves, mapping, env_number):
+    # Debug prints
+    print(f"Task policy Q shape: {task_policy_q.shape}")
+    print(f"Shared policy Q shape: {shared_policy_q.shape}")
     
-    # Add epsilon to avoid log(0)
-    task_probs = task_probs + epsilon
-    shared_probs = shared_probs + epsilon
+    # Get the actual indices for this environment's moves
+    env_indices = [mapping[move] for move in env_moves]
+    print(f"Environment {env_number} indices: {env_indices}\n")
+    
+    # Use the environment-specific indices
+    task_policy_q_common = task_policy_q  # Already has correct shape
+    shared_policy_q_common = shared_policy_q[:, env_indices]  # Select only relevant actions
     
     # Compute KL divergence
-    kl_div = F.kl_div(task_probs.log(), shared_probs, reduction='batchmean')
-
-
+    task_probs = F.softmax(task_policy_q_common, dim=1)
+    shared_probs = F.softmax(shared_policy_q_common, dim=1)
+    
+    kl_div = F.kl_div(
+        F.log_softmax(task_policy_q_common, dim=1),
+        shared_probs,
+        reduction='batchmean'
+    )
+    
     return kl_div
