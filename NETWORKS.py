@@ -9,6 +9,12 @@ import torch
 import gym
 from typing import Union, Optional, Dict, Tuple
 
+############################################################
+#Defining the NatureCNN architecture
+#NOTE: This is the same CNN architecture as used in the Q_network
+# in the original DQN function.
+############################################################
+
 class NatureCNN(nn.Module):
     def __init__(self, input_channels, features_dim=512):
         super().__init__()
@@ -44,6 +50,11 @@ class NatureCNN(nn.Module):
         x = self.linear(x)
         return x
 
+
+############################################################
+# Defining the SharedPolicy architecture using the same architecture
+# as the Qnetwork in the DQN function. 
+############################################################
 class SharedPolicy(nn.Module):
     def __init__(self, input_channels, action_space):
         super().__init__()
@@ -72,6 +83,13 @@ class SharedPolicy(nn.Module):
         :param mode: if true, set to training mode
         """
         self.train(mode)
+
+############################################################
+# We define a custom DQN class that inherits from the DQN class
+# This allows for easier training and implementation of the 
+# KL divergence loss term.
+############################################################
+
 class CustomDQN(DQN):
     def __init__(self, *args, shared_policy=None, kl_weight=0.1, env_moves=None, mapping=None, max_actions=None, env_number=None, **kwargs):
         """
@@ -93,11 +111,17 @@ class CustomDQN(DQN):
         self.max_actions = max_actions
         self.env_number = env_number
         
-        # Set action space to match environment moves
+        #Printing networks for debugging purposes
         print(f"CustomDQN initialized for env {env_number} with {len(env_moves)} actions: {env_moves}")
         print(f"Q-net: {self.q_net}\n")
         print(f"Q-net target: {self.q_net_target}\n")
 
+    ############################################################
+    #Mostly the same train function as the original DQN, However,
+    #we added a KL divergence loss term to the loss function.
+    ############################################################
+    
+    
     def train(self, gradient_steps: int, batch_size: int = 100) -> None:
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)
@@ -134,7 +158,10 @@ class CustomDQN(DQN):
             dqn_logits = self.q_net(replay_data_observations)  # Logits from DQN's policy
             shared_logits = self.shared_policy(replay_data_observations)  # Logits from the external shared policy
 
-            # Compute KL divergence using the external function
+            ############################################################
+            #Compute the KL divergence loss (NEW)
+            ############################################################
+            
             kl_divergence_loss = compute_kl_divergence(dqn_logits, shared_logits, self.env_moves, self.mapping, self.env_number)
 
             # Combine the losses (standard Q-learning loss + KL divergence loss)
