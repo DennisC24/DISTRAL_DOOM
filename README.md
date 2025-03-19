@@ -1,7 +1,11 @@
 # DISTRAL_DOOM
 
 <p align="center">
-  <video src="env2-Checking multiInp.mp4" width="400" />
+  <video width="400" controls>
+  <source src="env2-Checking multiInp.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
   <img src="llustration-of-the-Distral-framework.png" width="400" />
 </p>
 
