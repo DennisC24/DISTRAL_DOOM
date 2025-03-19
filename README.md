@@ -1,7 +1,7 @@
 # DISTRAL_DOOM
 
 <p align="center">
-  <img src="1*6ButB0aNnpx0OHBS9dDt7w.gif" width="400" />
+  <video src="env2-Checking multiInp.mp4" width="400" />
   <img src="llustration-of-the-Distral-framework.png" width="400" />
 </p>
 
